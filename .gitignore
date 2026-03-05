@@ -1,0 +1,20 @@
+# 环境与密钥
+.env
+.venv
+venv
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# RAG 与数据
+data/
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
