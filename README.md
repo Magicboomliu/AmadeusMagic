@@ -8,7 +8,7 @@
 
 > 如果你是从源码查看本仓库，请确保截图文件位于 `./.images/screenshot.png`，以便正常展示。
 
-![Amadeus Web 前端截图](.images/screenshot.png)
+![Amadeus Web 前端截图](images/screenshot.png)
 
 ## 功能概览
 
