@@ -4,7 +4,7 @@
 
 本仓库是一个 **MVP（最小可行产品）** 的 Python 后端实现，结合当前常见的 **AI（LLM）**、**RAG（检索增强）**、**TTS（语音合成）** 与 **语音输入（STT）** 技术，实现「能记忆、能对话、能说能听」的 Amadeus 风格助手。
 
-![Amadeus Web 前端截图](.data/screenshot.png)
+![Amadeus Web 前端截图](.images/screenshot.png)
 
 ## 功能概览
 
