@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from .api import router
 from .config import get_settings
@@ -36,6 +38,26 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router)
+
+    # Web 前端（零构建静态页）：访问 "/" 即可聊天
+    from pathlib import Path
+
+    web_dir = Path(__file__).resolve().parent / "web"
+    if web_dir.exists():
+        app.mount("/web", StaticFiles(directory=str(web_dir), html=True), name="web")
+
+        @app.get("/", include_in_schema=False)
+        def web_index():
+            return FileResponse(str(web_dir / "index.html"))
+
+        # 某些部署环境会请求 /favicon.ico；这里避免 404 噪音
+        @app.get("/favicon.ico", include_in_schema=False)
+        def favicon():
+            ico = web_dir / "favicon.ico"
+            if ico.exists():
+                return FileResponse(str(ico))
+            return Response(status_code=204)
+
     return app
 
 

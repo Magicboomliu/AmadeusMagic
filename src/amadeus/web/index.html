@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Amadeus MVP</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-2: rgba(255, 255, 255, 0.10);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.65);
+        --border: rgba(255, 255, 255, 0.14);
+        --accent: #7c5cff;
+        --accent-2: #00d4ff;
+        --danger: #ff4d6d;
+        --ok: #37d67a;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        --radius: 16px;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background:
+          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.22), transparent 55%),
+          radial-gradient(1000px 700px at 80% 20%, rgba(0, 212, 255, 0.18), transparent 55%),
+          radial-gradient(900px 700px at 60% 90%, rgba(55, 214, 122, 0.12), transparent 60%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+        display: grid;
+        grid-template-columns: 1.4fr 0.9fr;
+        gap: 18px;
+      }
+
+      @media (max-width: 960px) {
+        .wrap { grid-template-columns: 1fr; }
+      }
+
+      .topbar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+        box-shadow: var(--shadow);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+      .logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: conic-gradient(from 180deg, var(--accent), var(--accent-2), var(--ok), var(--accent));
+        filter: drop-shadow(0 12px 25px rgba(124, 92, 255, 0.22));
+      }
+      .brand h1 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+      .brand .sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.25);
+      }
+      .dot.ok { background: var(--ok); }
+      .dot.bad { background: var(--danger); }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .card-hd {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .card-hd h2 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.2px;
+        color: rgba(255,255,255,0.82);
+        font-weight: 800;
+      }
+
+      .chat {
+        display: flex;
+        flex-direction: column;
+        height: 72vh;
+        min-height: 520px;
+      }
+      .msgs {
+        flex: 1;
+        padding: 16px;
+        overflow: auto;
+      }
+      .msg {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        margin-bottom: 14px;
+        align-items: start;
+      }
+      .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 900;
+        color: rgba(255,255,255,0.92);
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.06);
+      }
+      .avatar.user { background: rgba(0, 212, 255, 0.12); }
+      .avatar.assistant { background: rgba(124, 92, 255, 0.12); }
+      .bubble {
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 10px 12px;
+        line-height: 1.45;
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .bubble.user { background: rgba(0, 212, 255, 0.08); }
+      .bubble.assistant { background: rgba(124, 92, 255, 0.08); }
+
+      .composer {
+        border-top: 1px solid var(--border);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        background: rgba(0,0,0,0.12);
+      }
+      textarea {
+        width: 100%;
+        resize: none;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.04);
+        color: var(--text);
+        padding: 10px 12px;
+        outline: none;
+        min-height: 46px;
+        max-height: 200px;
+        line-height: 1.35;
+      }
+      textarea:focus { border-color: rgba(124, 92, 255, 0.55); box-shadow: 0 0 0 3px rgba(124,92,255,0.12); }
+
+      .btn {
+        border: 1px solid rgba(255,255,255,0.18);
+        background: linear-gradient(180deg, rgba(124,92,255,0.35), rgba(124,92,255,0.18));
+        color: rgba(255,255,255,0.92);
+        padding: 10px 12px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        user-select: none;
+      }
+      .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+      .btn.secondary {
+        background: rgba(255,255,255,0.05);
+        font-weight: 800;
+      }
+      .btn.danger {
+        background: rgba(255, 77, 109, 0.12);
+        border-color: rgba(255, 77, 109, 0.28);
+      }
+
+      .side {
+        padding: 14px 16px;
+        display: grid;
+        gap: 14px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: rgba(255,255,255,0.78);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 12px;
+        padding: 10px;
+        background: rgba(0,0,0,0.22);
+        overflow: auto;
+      }
+      .toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        min-width: 220px;
+        max-width: 420px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(20, 25, 40, 0.92);
+        box-shadow: var(--shadow);
+        color: rgba(255,255,255,0.92);
+        font-size: 13px;
+        display: none;
+        white-space: pre-wrap;
+      }
+      .toast.show { display: block; }
+      .toast.ok { border-color: rgba(55,214,122,0.35); }
+      .toast.bad { border-color: rgba(255,77,109,0.45); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div style="min-width: 0">
+            <h1>Amadeus MVP</h1>
+            <div class="sub">RAG 记忆 + LLM 对话（可扩展语音） · EL PSY CONGROO</div>
+          </div>
+        </div>
+        <div class="status">
+          <div class="pill" title="后端健康检查">
+            <span id="healthDot" class="dot"></span>
+            <span id="healthText">checking…</span>
+          </div>
+          <a class="pill" href="/docs" target="_blank" rel="noreferrer">API 文档</a>
+        </div>
+      </div>
+
+      <div class="card chat">
+        <div class="card-hd">
+          <h2>对话</h2>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="clearBtn" class="btn secondary" type="button">清空</button>
+          </div>
+        </div>
+        <div id="msgs" class="msgs"></div>
+        <div class="composer">
+          <textarea id="input" placeholder="对 Amadeus 说点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
+          <button id="sendBtn" class="btn" type="button">发送</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>控制面板</h2>
+        </div>
+        <div class="side">
+          <div class="hint">
+            你可以把“人格设定 / 偏好 / 关键背景”写入记忆库，后续对话会更一致（RAG）。
+            如果启用本地 embedding，则不需要 OpenAI 配额即可写入与检索。
+          </div>
+
+          <div>
+            <textarea id="memoryText" placeholder="写入一条记忆（例如：用户喜欢用中文、偏好简洁回复、最喜欢的颜色是蓝色…）"></textarea>
+            <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+              <button id="memoryBtn" class="btn secondary" type="button">写入记忆</button>
+              <button id="seedBtn" class="btn danger" type="button" title="会写入一条提示记忆">写入“自我介绍”记忆</button>
+            </div>
+          </div>
+
+          <div class="hint">当前页面调用的接口：</div>
+          <div class="mono" id="endpoints"></div>
+
+          <div class="hint">
+            小技巧：你可以在聊天里让 Amadeus “总结你的偏好，并写入记忆”，然后复制到上面写入。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const msgsEl = $("msgs");
+      const inputEl = $("input");
+      const sendBtn = $("sendBtn");
+      const clearBtn = $("clearBtn");
+      const memoryEl = $("memoryText");
+      const memoryBtn = $("memoryBtn");
+      const seedBtn = $("seedBtn");
+      const healthDot = $("healthDot");
+      const healthText = $("healthText");
+      const toastEl = $("toast");
+      const endpointsEl = $("endpoints");
+
+      const state = {
+        history: [],
+        sending: false,
+      };
+
+      function nowTs() {
+        const d = new Date();
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function toast(msg, ok = true) {
+        toastEl.textContent = msg;
+        toastEl.className = "toast show " + (ok ? "ok" : "bad");
+        setTimeout(() => toastEl.classList.remove("show"), 2600);
+      }
+
+      function addMsg(role, content) {
+        const row = document.createElement("div");
+        row.className = "msg";
+        const av = document.createElement("div");
+        av.className = "avatar " + role;
+        av.textContent = role === "user" ? "你" : "A";
+        const b = document.createElement("div");
+        b.className = "bubble " + role;
+        b.textContent = content;
+        row.appendChild(av);
+        row.appendChild(b);
+        msgsEl.appendChild(row);
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+      }
+
+      function setSending(v) {
+        state.sending = v;
+        sendBtn.disabled = v;
+        inputEl.disabled = v;
+        memoryBtn.disabled = v;
+        seedBtn.disabled = v;
+        clearBtn.disabled = v;
+      }
+
+      async function checkHealth() {
+        try {
+          const r = await fetch("/api/health", { cache: "no-store" });
+          if (!r.ok) throw new Error("bad status");
+          const j = await r.json();
+          if (j.status === "ok") {
+            healthDot.className = "dot ok";
+            healthText.textContent = "backend ok";
+          } else {
+            healthDot.className = "dot bad";
+            healthText.textContent = "backend unknown";
+          }
+        } catch (e) {
+          healthDot.className = "dot bad";
+          healthText.textContent = "backend down";
+        }
+      }
+
+      async function sendText(message) {
+        const fd = new FormData();
+        fd.set("message", message);
+        if (state.history.length) fd.set("history", JSON.stringify(state.history));
+
+        const r = await fetch("/api/chat", { method: "POST", body: fd });
+        if (!r.ok) {
+          const t = await r.text();
+          throw new Error(t || ("HTTP " + r.status));
+        }
+        return await r.json();
+      }
+
+      async function addMemory(text) {
+        const fd = new FormData();
+        fd.set("content", text);
+        const r = await fetch("/api/memory", { method: "POST", body: fd });
+        if (!r.ok) {
+          let detail = "";
+          try {
+            const j = await r.json();
+            detail = j.detail || JSON.stringify(j);
+          } catch {
+            detail = await r.text();
+          }
+          throw new Error(detail || ("HTTP " + r.status));
+        }
+        return await r.json();
+      }
+
+      async function onSend() {
+        const text = inputEl.value.trim();
+        if (!text || state.sending) return;
+        inputEl.value = "";
+        addMsg("user", text);
+        state.history.push({ role: "user", content: text });
+        setSending(true);
+        const thinking = "（" + nowTs() + "）思考中…";
+        addMsg("assistant", thinking);
+        try {
+          const j = await sendText(text);
+          // 替换“思考中…”
+          msgsEl.lastChild.querySelector(".bubble").textContent = j.reply || "";
+          state.history.push({ role: "assistant", content: j.reply || "" });
+        } catch (e) {
+          msgsEl.lastChild.querySelector(".bubble").textContent = "请求失败：" + (e && e.message ? e.message : String(e));
+          toast("发送失败：请检查后端日志/配置（LLM Key、网络等）", false);
+        } finally {
+          setSending(false);
+          inputEl.focus();
+        }
+      }
+
+      function onClear() {
+        state.history = [];
+        msgsEl.innerHTML = "";
+        addMsg("assistant", "你好，我是 Amadeus。你想聊点什么？");
+      }
+
+      async function onMemory() {
+        const text = memoryEl.value.trim();
+        if (!text || state.sending) return;
+        setSending(true);
+        try {
+          const j = await addMemory(text);
+          toast("记忆已写入：" + (j.id || ""));
+          memoryEl.value = "";
+        } catch (e) {
+          toast("写入失败：" + (e && e.message ? e.message : String(e)), false);
+        } finally {
+          setSending(false);
+        }
+      }
+
+      async function onSeed() {
+        const text = "你是 Amadeus（灵感来自《命运石之门 0》），请在对话中保持友好、自然、略带知性；当用户聊到作品设定时，明确这是虚构世界观。";
+        memoryEl.value = text;
+        await onMemory();
+      }
+
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          onSend();
+        }
+      });
+      sendBtn.addEventListener("click", onSend);
+      clearBtn.addEventListener("click", onClear);
+      memoryBtn.addEventListener("click", onMemory);
+      seedBtn.addEventListener("click", onSeed);
+
+      endpointsEl.textContent = [
+        "GET  /api/health",
+        "POST /api/chat (FormData: message, history?)",
+        "POST /api/memory (FormData: content)",
+      ].join("\\n");
+
+      onClear();
+      checkHealth();
+      setInterval(checkHealth, 5000);
+    </script>
+  </body>
+</html>

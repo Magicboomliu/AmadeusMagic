@@ -105,6 +105,13 @@ uv run uvicorn amadeus.main:app --reload --host 0.0.0.0 --port 8000
 
 服务默认在 **http://127.0.0.1:8000**，文档在 **http://127.0.0.1:8000/docs**。
 
+### 5. 打开 Web 前端（推荐）
+
+启动后直接访问：
+
+- `http://127.0.0.1:8000/`：聊天 Web UI（零构建，无需 Node）
+- `http://127.0.0.1:8000/docs`：API 文档
+
 ## API 说明
 
 | 方法 | 路径 | 说明 |
