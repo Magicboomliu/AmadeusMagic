@@ -2,17 +2,23 @@
 RAG（检索增强生成）模块：Amadeus 的「记忆」层。
 
 - 使用 Chroma 存储文档的向量嵌入
-- 通过 OpenAI Embeddings 将文本转为向量
+- 通过 Embedding（远程 API 或本地模型）将文本转为向量
 - 用户提问时检索最相关的记忆片段，供 LLM 作为上下文
 """
 
 from pathlib import Path
+from functools import lru_cache
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from openai import OpenAI
 
 from .config import get_settings
+
+
+# Embedding 不可用时的显式异常，便于 API 层返回清晰错误
+class EmbeddingUnavailableError(RuntimeError):
+    pass
 
 
 # 默认的 Amadeus 人格/知识片段，可视为「初始记忆」
@@ -32,15 +38,33 @@ def get_embedding_client() -> OpenAI:
         base_url=s.embedding_url(),
     )
 
+@lru_cache(maxsize=1)
+def _get_local_embedding_model():
+    """懒加载本地 embedding 模型。
+
+    说明：
+    - 首次加载会下载模型权重到本机缓存（通常在 ~/.cache/huggingface/）
+    - 后续请求复用同一实例，避免重复加载带来延迟
+    """
+    from sentence_transformers import SentenceTransformer
+
+    s = get_settings()
+    return SentenceTransformer(s.local_embedding_model)
+
 
 def get_embedding(text: str) -> list[float]:
     """将单段文本转为 embedding 向量。"""
-    client = get_embedding_client()
     s = get_settings()
-    resp = client.embeddings.create(
-        model=s.embedding_model,
-        input=text,
-    )
+    if s.use_local_embeddings:
+        model = _get_local_embedding_model()
+        vec = model.encode(
+            text,
+            normalize_embeddings=True,
+        )
+        return vec.astype("float32").tolist()
+
+    client = get_embedding_client()
+    resp = client.embeddings.create(model=s.embedding_model, input=text)
     return resp.data[0].embedding
 
 
@@ -48,13 +72,17 @@ def get_embeddings(texts: list[str]) -> list[list[float]]:
     """批量将文本转为 embedding，减少 API 调用次数。"""
     if not texts:
         return []
-    client = get_embedding_client()
     s = get_settings()
-    resp = client.embeddings.create(
-        model=s.embedding_model,
-        input=texts,
-    )
-    # 保持与 input 顺序一致
+    if s.use_local_embeddings:
+        model = _get_local_embedding_model()
+        vecs = model.encode(
+            texts,
+            normalize_embeddings=True,
+        )
+        return vecs.astype("float32").tolist()
+
+    client = get_embedding_client()
+    resp = client.embeddings.create(model=s.embedding_model, input=texts)
     ordered = {e.index: e.embedding for e in resp.data}
     return [ordered[i] for i in range(len(texts))]
 
@@ -75,7 +103,9 @@ COLLECTION_NAME = "amadeus_memory"
 
 
 def get_collection():
-    """获取 Chroma 中的 amadeus_memory 集合；不存在则创建并写入默认记忆。"""
+    """获取 Chroma 中的 amadeus_memory 集合；不存在则创建并写入默认记忆。
+    Embedding 调用失败（如 OpenAI 配额不足）时仍返回空集合，不阻塞聊天。
+    """
     client = get_chroma_client()
     try:
         coll = client.get_collection(name=COLLECTION_NAME)
@@ -84,13 +114,16 @@ def get_collection():
             name=COLLECTION_NAME,
             metadata={"description": "Amadeus 记忆与知识库"},
         )
-        # 写入默认记忆
-        ids = [f"default_{i}" for i in range(len(DEFAULT_MEMORIES))]
-        coll.add(
-            ids=ids,
-            embeddings=get_embeddings(DEFAULT_MEMORIES),
-            documents=DEFAULT_MEMORIES,
-        )
+        # 写入默认记忆；若 Embedding API 失败（配额/未配置等）则跳过，保持空集合
+        try:
+            ids = [f"default_{i}" for i in range(len(DEFAULT_MEMORIES))]
+            coll.add(
+                ids=ids,
+                embeddings=get_embeddings(DEFAULT_MEMORIES),
+                documents=DEFAULT_MEMORIES,
+            )
+        except Exception:
+            pass  # 无配额或网络错误时仅跳过默认记忆，聊天仍可进行
     return coll
 
 
@@ -100,9 +133,19 @@ def add_memory(text: str, metadata: dict | None = None) -> str:
     返回新记忆的 id。
     """
     coll = get_collection()
-    emb = get_embedding(text)
+    try:
+        emb = get_embedding(text)
+    except Exception as e:
+        # 典型原因：OpenAI Embedding 配额不足（429）、未配置 key、网络问题、提供方不支持 embedding
+        raise EmbeddingUnavailableError(
+            "Embedding 不可用：当前无法为记忆生成向量；请配置可用的 EMBEDDING_API_KEY/EMBEDDING_BASE_URL，或稍后重试。"
+        ) from e
     new_id = f"mem_{len(coll.get()['ids'])}"
-    coll.add(ids=[new_id], embeddings=[emb], documents=[text], metadatas=[metadata or {}])
+    # Chroma 不接受空字典作为 metadata；没有 metadata 时直接不传 metadatas 参数
+    if metadata:
+        coll.add(ids=[new_id], embeddings=[emb], documents=[text], metadatas=[metadata])
+    else:
+        coll.add(ids=[new_id], embeddings=[emb], documents=[text])
     return new_id
 
 
@@ -110,16 +153,22 @@ def search_memory(query: str, top_k: int = 5) -> list[str]:
     """
     根据用户问题检索最相关的记忆片段。
     返回 top_k 条文档文本列表。
+    Embedding 调用失败（如 OpenAI 配额不足）时返回空列表，不阻塞聊天。
     """
-    coll = get_collection()
-    query_emb = get_embedding(query)
-    results = coll.query(
-        query_embeddings=[query_emb],
-        n_results=min(top_k, coll.count()),
-    )
-    if not results or not results["documents"]:
+    try:
+        coll = get_collection()
+        if coll.count() == 0:
+            return []
+        query_emb = get_embedding(query)
+        results = coll.query(
+            query_embeddings=[query_emb],
+            n_results=min(top_k, coll.count()),
+        )
+        if not results or not results["documents"]:
+            return []
+        return results["documents"][0] or []
+    except Exception:
         return []
-    return results["documents"][0] or []
 
 
 def build_rag_context(query: str, top_k: int = 5) -> str:

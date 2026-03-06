@@ -15,6 +15,8 @@ dependencies = [
     "python-multipart>=0.0.12",
     "httpx>=0.27.0",
     "edge-tts>=6.1.0",
+    # 本地 embedding（免费）：用于 RAG 向量化，不依赖 OpenAI 额度
+    "sentence-transformers>=3.0.0",
 ]
 
 [project.optional-dependencies]

@@ -14,7 +14,7 @@ from fastapi.responses import Response
 
 from .config import get_settings
 from .llm import chat as llm_chat
-from .rag import add_memory
+from .rag import EmbeddingUnavailableError, add_memory
 from .stt import speech_to_text
 from .tts import text_to_speech
 
@@ -83,5 +83,9 @@ def memory_add(
     content: str = Form(..., description="要存入 Amadeus 记忆的文本"),
 ) -> dict[str, Any]:
     """添加一条记忆到 RAG 知识库，后续对话可被检索到。"""
-    mem_id = add_memory(content)
-    return {"id": mem_id, "message": "记忆已添加"}
+    try:
+        mem_id = add_memory(content)
+        return {"id": mem_id, "message": "记忆已添加"}
+    except EmbeddingUnavailableError as e:
+        # 当 Embedding 不可用时，明确告知用户需要配置 embedding，避免 500
+        raise HTTPException(status_code=503, detail=str(e))

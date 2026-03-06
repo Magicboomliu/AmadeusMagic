@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     embedding_base_url: str | None = None
     embedding_model: str = "text-embedding-3-small"
 
+    # 本地 Embedding（免费）：开启后将完全不调用 Embedding API（用于解决 OpenAI 配额不足）
+    use_local_embeddings: bool = False
+    # 中文/多语都不错的默认模型；首次运行会自动下载到本机缓存目录
+    local_embedding_model: str = "BAAI/bge-small-zh-v1.5"
+
     # TTS（默认用 OpenAI TTS；也可以指向兼容服务）
     tts_api_key: str | None = None
     tts_base_url: str | None = None
