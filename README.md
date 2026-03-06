@@ -180,7 +180,17 @@ AmadeusMagic/
         └── main.py          # FastAPI 应用与 CORS、lifespan
 ```
 
-首次请求会懒加载 RAG 并写入默认的 Amadeus 人格记忆；之后可通过 `/api/memory` 继续追加记忆。
+首次请求会懒加载 RAG 并写入默认记忆：
+- Amadeus 的基础自我介绍与“会记忆”的行为约定
+- 一组更完整的《Steins;Gate/命运石之门》作品设定知识卡片（均按“作品设定/虚构世界观”处理），包括但不限于：
+  - 世界线/发散率（Divergence）
+  - 吸引域（Attractor Field）与收束（Convergence）
+  - D-mail（D-Mail）与电话微波炉（Phone Microwave）
+  - Reading Steiner
+  - SERN、ECHELON、Rounder
+  - 约翰·提托、IBM/IBN 5100、时间机器
+
+之后可通过 `/api/memory` 继续追加记忆（例如注入更完整的人格模板、你的个人偏好等）。
 
 ## 配置项说明（.env）
 
